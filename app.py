@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from kavenegar import KavenegarAPI
 from datetime import datetime
-import pandas as pd
 import jdatetime  # برای تاریخ شمسی
 
 app = Flask(__name__)
@@ -29,7 +28,6 @@ students = [
     {"class": "310", "firstname": "مهراب", "lastname": "عزیزی", "parent_number": "09962935294"}
 ]
 absents_today = []
-EXCEL_FILE = "absents.xlsx"
 
 # --- ROUTES ---
 
@@ -104,7 +102,6 @@ def absent(index):
     student = students[index]
     current_time = datetime.now()
     current_time_str = current_time.strftime("%H:%M")
-
     persian_date = jdatetime.datetime.fromgregorian(datetime=current_time).strftime("%Y/%m/%d")
 
     message_text = (
@@ -132,22 +129,7 @@ def absent(index):
             "date": persian_date
         })
 
-        df = pd.DataFrame([{
-            "نام": student["firstname"],
-            "نام خانوادگی": student["lastname"],
-            "کلاس": student["class"],
-            "تاریخ": persian_date,
-            "ساعت": current_time_str
-        }])
-
-        try:
-            existing_df = pd.read_excel(EXCEL_FILE)
-            df = pd.concat([existing_df, df], ignore_index=True)
-        except FileNotFoundError:
-            pass
-
-        df.to_excel(EXCEL_FILE, index=False)
-        flash(f"✅ پیام غیبت برای {student['firstname']} {student['lastname']} ارسال شد و در اکسل ثبت شد.", "success")
+        flash(f"✅ پیام غیبت برای {student['firstname']} {student['lastname']} ارسال شد.", "success")
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
 

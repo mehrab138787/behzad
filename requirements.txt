@@ -1,5 +1,4 @@
 Flask==2.3.2
-pandas==1.5.3
 gunicorn==21.2.0
 jdatetime==4.1.1
 kavenegar==1.1.2
