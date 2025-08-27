@@ -19,52 +19,72 @@
         }
 
         .login-container {
-            background: white;
-            padding: 40px 50px;
-            border-radius: 15px;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-            width: 350px;
+            background: #fff;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 400px;
             text-align: center;
+            animation: fadeIn 0.6s ease-in-out;
         }
 
         .login-container h1 {
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             color: #4e54c8;
             font-weight: 700;
+            font-size: 24px;
+        }
+
+        .login-container h1::before {
+            content: "🔑 ";
         }
 
         .login-container input[type="text"],
         .login-container input[type="password"] {
             width: 100%;
-            padding: 12px 15px;
+            padding: 12px 14px;
             margin: 10px 0;
-            border-radius: 8px;
+            border-radius: 10px;
             border: 1px solid #ccc;
-            font-size: 16px;
+            font-size: 15px;
+            transition: 0.3s;
+        }
+
+        .login-container input:focus {
+            border-color: #4e54c8;
+            outline: none;
+            box-shadow: 0 0 5px rgba(78, 84, 200, 0.5);
         }
 
         .login-container button {
             width: 100%;
-            padding: 12px;
-            background: #4e54c8;
+            padding: 14px;
+            background: linear-gradient(to right, #4e54c8, #6c70f5);
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             color: white;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             margin-top: 15px;
-            transition: background 0.3s ease;
+            transition: 0.3s;
         }
 
         .login-container button:hover {
-            background: #3b40a4;
+            background: linear-gradient(to right, #3b40a4, #565bf0);
         }
 
         .flash-message {
             margin-bottom: 15px;
             color: red;
             font-weight: bold;
+            font-size: 14px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
     </style>
