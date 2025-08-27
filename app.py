@@ -1,10 +1,29 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-from kavenegar import KavenegarAPI
+from flask_sqlalchemy import SQLAlchemy
+from kavenegar import *
 from datetime import datetime
-import jdatetime  # برای تاریخ شمسی
+import jdatetime
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
+
+# --- DATABASE CONFIG ---
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///school.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# --- MODELS ---
+class Class(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    students = db.relationship("Student", backref="class_", lazy=True, cascade="all, delete")
+
+class Student(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    firstname = db.Column(db.String(50), nullable=False)
+    lastname = db.Column(db.String(50), nullable=False)
+    parent_number = db.Column(db.String(20), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey("class.id"), nullable=False)
 
 # --- LOGIN CONFIG ---
 USERNAME = 'mehrab'
@@ -22,15 +41,7 @@ def login_required(f):
 # --- KAVENEGAR CONFIG ---
 api = KavenegarAPI('324B30764337784D544C6C356F426149734F71364B774D49565562737776797957675A63554643554C416B3D')
 
-# --- DATA ---
-classes = ["310"]
-students = [
-    {"class": "310", "firstname": "مهراب", "lastname": "عزیزی", "parent_number": "09962935294"}
-]
-absents_today = []
-
 # --- ROUTES ---
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = None
@@ -54,79 +65,106 @@ def logout():
 @app.route("/")
 @login_required
 def index():
-    students_sorted = sorted(students, key=lambda x: x['firstname'])
-    return render_template("index.html", classes=classes, students=students_sorted, absents_today=absents_today)
+    classes = Class.query.order_by(Class.name).all()
+    return render_template("index.html", classes=classes)
+
+@app.route("/class/<int:class_id>")
+@login_required
+def view_class(class_id):
+    class_ = Class.query.get_or_404(class_id)
+    students = Student.query.filter_by(class_id=class_id).order_by(Student.firstname).all()
+    return render_template("class_detail.html", class_=class_, students=students)
 
 @app.route("/add_class", methods=["GET", "POST"])
 @login_required
 def add_class():
     if request.method == "POST":
         classname = request.form["classname"]
-        if classname and classname not in classes:
-            classes.append(classname)
-            flash(f"کلاس {classname} با موفقیت اضافه شد ✅", "success")
+        if classname:
+            existing = Class.query.filter_by(name=classname).first()
+            if not existing:
+                new_class = Class(name=classname)
+                db.session.add(new_class)
+                db.session.commit()
+                flash(f"کلاس {classname} اضافه شد ✅", "success")
         return redirect(url_for("index"))
     return render_template("add_class.html")
 
-@app.route("/add_student", methods=["GET", "POST"])
+@app.route("/delete_class/<int:id>")
 @login_required
-def add_student():
+def delete_class(id):
+    class_ = Class.query.get_or_404(id)
+    db.session.delete(class_)
+    db.session.commit()
+    flash("کلاس حذف شد ❌", "danger")
+    return redirect(url_for("index"))
+
+@app.route("/add_student/<int:class_id>", methods=["GET", "POST"])
+@login_required
+def add_student(class_id):
+    class_ = Class.query.get_or_404(class_id)
     if request.method == "POST":
         firstname = request.form["firstname"]
         lastname = request.form["lastname"]
         parent_number = request.form["parent_number"]
-        class_selected = request.form["class_selected"]
 
-        if firstname and lastname and parent_number and class_selected:
-            students.append({
-                "class": class_selected,
-                "firstname": firstname,
-                "lastname": lastname,
-                "parent_number": parent_number
-            })
-            flash(f"دانش‌آموز {firstname} {lastname} به کلاس {class_selected} اضافه شد ✅", "success")
-        return redirect(url_for("index"))
+        if firstname and lastname and parent_number:
+            student = Student(firstname=firstname, lastname=lastname,
+                              parent_number=parent_number, class_id=class_id)
+            db.session.add(student)
+            db.session.commit()
+            flash(f"دانش‌آموز {firstname} {lastname} اضافه شد ✅", "success")
+        return redirect(url_for("view_class", class_id=class_id))
 
-    return render_template("add_student.html", classes=classes)
+    return render_template("add_student.html", class_=class_)
 
-@app.route("/absent/<int:index>")
+@app.route("/delete_student/<int:id>")
 @login_required
-def absent(index):
-    student = students[index]
+def delete_student(id):
+    student = Student.query.get_or_404(id)
+    class_id = student.class_id
+    db.session.delete(student)
+    db.session.commit()
+    flash("دانش‌آموز حذف شد ❌", "danger")
+    return redirect(url_for("view_class", class_id=class_id))
+
+@app.route("/edit_student/<int:id>", methods=["GET", "POST"])
+@login_required
+def edit_student(id):
+    student = Student.query.get_or_404(id)
+    if request.method == "POST":
+        student.firstname = request.form["firstname"]
+        student.lastname = request.form["lastname"]
+        student.parent_number = request.form["parent_number"]
+        db.session.commit()
+        flash("✅ اطلاعات دانش‌آموز ویرایش شد", "success")
+        return redirect(url_for("view_class", class_id=student.class_id))
+    return render_template("edit_student.html", student=student)
+
+@app.route("/absent/<int:student_id>")
+@login_required
+def absent(student_id):
+    student = Student.query.get_or_404(student_id)
     current_time = datetime.now()
     current_time_str = current_time.strftime("%H:%M")
     persian_date = jdatetime.datetime.fromgregorian(datetime=current_time).strftime("%Y/%m/%d")
 
-    message_text = (
-        f"درود و وقت بخیر 🌹\n"
-        f"فرزند شما ({student['firstname']} {student['lastname']} - کلاس {student['class']}) "
-        f"در ساعت {current_time_str} در مدرسه حضور نداشتند.\n"
-        f"لطفا فردا به مدرسه مراجعه نمایید.\n"
-        f"با تشکر از شما 🙏\n"
-        f"معاونت دبیرستان - استاد بهزاد کیومرث نجفی"
-    )
+    message_text = f"درود و وقت بخیر 🌹\nفرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) در ساعت {current_time_str} در مدرسه حضور نداشتند.\nلطفا فردا به مدرسه مراجعه نمایید.\nبا تشکر 🙏"
 
     params = {
         'sender': '2000660110',
-        'receptor': student["parent_number"],
+        'receptor': student.parent_number,
         'message': message_text
     }
     try:
-        api.sms_send(params)
-
-        absents_today.append({
-            "firstname": student["firstname"],
-            "lastname": student["lastname"],
-            "class": student["class"],
-            "time": current_time_str,
-            "date": persian_date
-        })
-
-        flash(f"✅ پیام غیبت برای {student['firstname']} {student['lastname']} ارسال شد.", "success")
+        response = api.sms_send(params)
+        flash(f"✅ پیام غیبت برای {student.firstname} {student.lastname} ارسال شد.", "success")
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
 
-    return redirect(url_for("index"))
+    return redirect(url_for("view_class", class_id=student.class_id))
 
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
