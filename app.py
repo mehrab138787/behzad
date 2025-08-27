@@ -41,16 +41,9 @@ def login():
             session['logged_in'] = True
             return redirect(url_for("index"))
         else:
-            error = "یوزر یا پسورد اشتباه است!"
-    return '''
-        <h2>Login</h2>
-        <form method="post">
-            <input type="text" name="username" placeholder="Username" required><br>
-            <input type="password" name="password" placeholder="Password" required><br>
-            <input type="submit" value="Login">
-        </form>
-        <p style="color:red;">{}</p>
-    '''.format(error or '')
+            error = "نام کاربری یا رمز عبور اشتباه است!"
+            flash(error, "danger")
+    return render_template("login.html")
 
 @app.route("/logout")
 @login_required
