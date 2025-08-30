@@ -39,7 +39,7 @@ def login_required(f):
     return decorated_function
 
 # --- KAVENEGAR CONFIG ---
-api = KavenegarAPI('324B30764337784D544C6C356F426149734F71364B774D49565562737776797957675A63554643554C416B3D')
+api = KavenegarAPI('38776243534D5573575A424D542F736A6D475957716B62575276573733427A43386B6F2F6B4A45555553773D')
 
 # --- ROUTES ---
 @app.route("/login", methods=["GET", "POST"])
@@ -72,7 +72,8 @@ def index():
 @login_required
 def view_class(class_id):
     class_ = Class.query.get_or_404(class_id)
-    students = Student.query.filter_by(class_id=class_id).order_by(Student.firstname).all()
+    # مرتب‌سازی بر اساس نام خانوادگی سپس نام کوچک
+    students = Student.query.filter_by(class_id=class_id).order_by(Student.lastname, Student.firstname).all()
     return render_template("class_detail.html", class_=class_, students=students)
 
 @app.route("/add_class", methods=["GET", "POST"])
@@ -145,11 +146,32 @@ def edit_student(id):
 @login_required
 def absent(student_id):
     student = Student.query.get_or_404(student_id)
-    current_time = datetime.now()
-    current_time_str = current_time.strftime("%H:%M")
-    persian_date = jdatetime.datetime.fromgregorian(datetime=current_time).strftime("%Y/%m/%d")
 
-    message_text = f"درود و وقت بخیر 🌹\nفرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) در ساعت {current_time_str} در مدرسه حضور نداشتند.\nلطفا فردا به مدرسه مراجعه نمایید.\nبا تشکر 🙏"
+    # دانش‌آموزانی که پیامک برایشان ارسال نشود
+    no_sms_list = [
+        {"firstname": "طاها", "lastname": "کامیابی", "class_name": "111"},
+        {"firstname": "علیرضا", "lastname": "مرادی", "class_name": "310"}
+    ]
+
+    if any(student.firstname == s["firstname"] and
+           student.lastname == s["lastname"] and
+           student.class_.name == s["class_name"] for s in no_sms_list):
+        flash(f"✅ غیبت برای {student.firstname} {student.lastname} ثبت شد (پیامک ارسال نشد).", "success")
+        return redirect(url_for("view_class", class_id=student.class_id))
+
+    # زمان دقیق شمسی
+    current_time = datetime.now()
+    persian_datetime = jdatetime.datetime.fromgregorian(datetime=current_time)
+    persian_date_str = persian_datetime.strftime("%Y/%m/%d")
+    persian_time_str = persian_datetime.strftime("%H:%M")
+
+    message_text = (
+        f"درود و وقت بخیر 🌹\n"
+        f"فرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) "
+        f"در تاریخ {persian_date_str} ساعت {persian_time_str} در مدرسه حضور نداشتند.\n"
+        f"لطفا فردا به مدرسه مراجعه نمایید.\n"
+        f"با تشکر 🙏"
+    )
 
     params = {
         'sender': '2000660110',
@@ -164,7 +186,8 @@ def absent(student_id):
 
     return redirect(url_for("view_class", class_id=student.class_id))
 
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

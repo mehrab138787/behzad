@@ -1,92 +1,140 @@
 <!DOCTYPE html>
 <html lang="fa">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>دانش‌آموزان کلاس {{ class_.name }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دانش‌آموزان کلاس {{ class_.name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa, #e4ecf7);
+      font-family: "Vazirmatn", Tahoma, sans-serif;
+    }
+    .student-card {
+      border-radius: 20px;
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+    }
+    .student-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.15);
+    }
+    .student-name {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #0d6efd;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .student-info {
+      font-size: 1.1rem;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    /* دکمه غیبت */
+    .btn-absent {
+      display: block;
+      width: 100%;
+      border-radius: 50px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      padding: 12px;
+      margin-bottom: 15px;
+      transition: 0.3s;
+    }
+    .btn-absent:hover {
+      transform: scale(1.05);
+    }
+    /* دکمه ویرایش و حذف */
+    .action-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .action-row a {
+      flex: 1;
+      border-radius: 50px;
+      font-size: 1rem;
+      padding: 10px;
+      transition: 0.3s;
+    }
+    .action-row a:hover {
+      transform: scale(1.05);
+    }
+    .navbar {
+      border-radius: 0 0 20px 20px;
+    }
+  </style>
 </head>
-<body dir="rtl" style="background:#f5f7fa; font-family: Tahoma;">
+<body dir="rtl">
 
 <!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/">📚 دبیرستان استاد بهزاد</a>
-        <div class="d-flex ms-auto">
-            <a href="{{ url_for('add_student', class_id=class_.id) }}" class="btn btn-warning btn-sm">➕ افزودن دانش‌آموز</a>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-2">🚪 خروج</a>
-        </div>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-lg">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold fs-5" href="/">📚 دبیرستان استاد بهزاد</a>
+    <div class="d-flex ms-auto">
+      <a href="{{ url_for('add_student', class_id=class_.id) }}" class="btn btn-warning btn-sm rounded-pill">➕ افزودن</a>
+      <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm rounded-pill ms-2">🚪 خروج</a>
     </div>
+  </div>
 </nav>
 
-<div class="container mt-3">
+<div class="container mt-4">
 
-    <!-- پیام‌ها -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <h3 class="mb-4 text-center text-primary">👩‍🎓 لیست دانش‌آموزان کلاس {{ class_.name }}</h3>
-
-    <!-- جدول دانش‌آموزان -->
-    <div class="card shadow-lg border-0 rounded-4">
-        <div class="card-body">
-            {% if students %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover text-center align-middle">
-                    <thead class="table-primary">
-                        <tr>
-                            <th>نام</th>
-                            <th>نام خانوادگی</th>
-                            <th>شماره والدین</th>
-                            <th>عملیات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for student in students %}
-                        <tr>
-                            <td>{{ student.firstname }}</td>
-                            <td>{{ student.lastname }}</td>
-                            <td>{{ student.parent_number }}</td>
-                            <td>
-                                <a href="{{ url_for('absent', student_id=student.id) }}" class="btn btn-danger btn-sm">🚫 غیبت</a>
-                                <a href="{{ url_for('edit_student', id=student.id) }}" class="btn btn-info btn-sm">✏️ ویرایش</a>
-                                <a href="{{ url_for('delete_student', id=student.id) }}" class="btn btn-outline-danger btn-sm"
-                                   onclick="return confirm('آیا مطمئنید می‌خواهید حذف کنید؟');">🗑 حذف</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-                <p class="text-muted">هیچ دانش‌آموزی در این کلاس ثبت نشده است.</p>
-            {% endif %}
+  <!-- پیام‌ها -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
-    <div class="text-center mt-3">
-        <a href="{{ url_for('index') }}" class="btn btn-secondary">⬅️ بازگشت به صفحه اصلی</a>
+  <h3 class="text-center mb-4 text-primary fw-bold">👩‍🎓 لیست دانش‌آموزان کلاس {{ class_.name }}</h3>
+
+  {% if students %}
+    {% for student in students %}
+    <div class="student-card">
+      <div class="student-name">{{ student.firstname }} {{ student.lastname }}</div>
+      <div class="student-info"><strong>شماره والدین:</strong> {{ student.parent_number }}</div>
+      
+      <!-- دکمه غیبت بزرگ -->
+      <a href="{{ url_for('absent', student_id=student.id) }}" class="btn btn-danger btn-absent">🚫 غیبت</a>
+      
+      <!-- دکمه‌های ویرایش و حذف -->
+      <div class="action-row">
+        <a href="{{ url_for('edit_student', id=student.id) }}" class="btn btn-info">✏️ ویرایش</a>
+        <a href="{{ url_for('delete_student', id=student.id) }}" 
+           class="btn btn-outline-secondary"
+           onclick="return confirm('آیا مطمئنید می‌خواهید حذف کنید؟');">🗑 حذف</a>
+      </div>
     </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-muted text-center">هیچ دانش‌آموزی در این کلاس ثبت نشده است.</p>
+  {% endif %}
+
+  <div class="text-center mt-4">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary rounded-pill">⬅️ بازگشت</a>
+  </div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    setTimeout(() => {
-        let alerts = document.querySelectorAll('.alert');
-        alerts.forEach(a => {
-            let bsAlert = new bootstrap.Alert(a);
-            bsAlert.close();
-        });
-    }, 3000);
+  setTimeout(() => {
+      let alerts = document.querySelectorAll('.alert');
+      alerts.forEach(a => {
+          let bsAlert = new bootstrap.Alert(a);
+          bsAlert.close();
+      });
+  }, 3000);
 </script>
 </body>
 </html>

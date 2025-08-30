@@ -1,109 +1,120 @@
 <!DOCTYPE html>
 <html lang="fa">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورود مدیر</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ورود مدیر</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Vazirmatn', sans-serif;
+    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Vazirmatn', sans-serif;
-            background: linear-gradient(to right, #4e54c8, #8f94fb);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+.login-container {
+    background: #ffffff;
+    padding: 50px 40px;
+    border-radius: 25px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    animation: fadeInUp 0.7s ease-in-out;
+    transition: transform 0.3s;
+}
 
-        .login-container {
-            background: #fff;
-            padding: 40px 30px;
-            border-radius: 20px;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.2);
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-            animation: fadeIn 0.6s ease-in-out;
-        }
+.login-container:hover {
+    transform: translateY(-5px);
+}
 
-        .login-container h1 {
-            margin-bottom: 25px;
-            color: #4e54c8;
-            font-weight: 700;
-            font-size: 24px;
-        }
+.login-container h1 {
+    margin-bottom: 30px;
+    color: #4e54c8;
+    font-weight: 700;
+    font-size: 28px;
+}
 
-        .login-container h1::before {
-            content: "🔑 ";
-        }
+.login-container input[type="text"],
+.login-container input[type="password"] {
+    width: 100%;
+    padding: 14px 16px;
+    margin: 12px 0;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    transition: all 0.3s;
+}
 
-        .login-container input[type="text"],
-        .login-container input[type="password"] {
-            width: 100%;
-            padding: 12px 14px;
-            margin: 10px 0;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-            font-size: 15px;
-            transition: 0.3s;
-        }
+.login-container input:focus {
+    border-color: #4e54c8;
+    outline: none;
+    box-shadow: 0 0 8px rgba(78, 84, 200, 0.4);
+}
 
-        .login-container input:focus {
-            border-color: #4e54c8;
-            outline: none;
-            box-shadow: 0 0 5px rgba(78, 84, 200, 0.5);
-        }
+.login-container button {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+    border: none;
+    border-radius: 15px;
+    color: white;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: all 0.3s;
+}
 
-        .login-container button {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(to right, #4e54c8, #6c70f5);
-            border: none;
-            border-radius: 10px;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: 0.3s;
-        }
+.login-container button:hover {
+    background: linear-gradient(135deg, #8f94fb, #4e54c8);
+    transform: scale(1.05);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+}
 
-        .login-container button:hover {
-            background: linear-gradient(to right, #3b40a4, #565bf0);
-        }
+.flash-message {
+    margin-bottom: 15px;
+    color: #d32f2f;
+    font-weight: bold;
+    font-size: 15px;
+}
 
-        .flash-message {
-            margin-bottom: 15px;
-            color: red;
-            font-weight: bold;
-            font-size: 14px;
-        }
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-    </style>
+@media (max-width: 576px) {
+    .login-container {
+        padding: 35px 25px;
+    }
+    .login-container h1 { font-size: 24px; }
+    .login-container input[type="text"],
+    .login-container input[type="password"] { font-size: 15px; padding: 12px 14px; }
+    .login-container button { font-size: 16px; padding: 14px; }
+}
+</style>
 </head>
 <body>
-    <div class="login-container">
-        <h1>ورود مدیر</h1>
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            <div class="flash-message">
-              {{ messages[0] }}
-            </div>
-          {% endif %}
-        {% endwith %}
-        <form method="POST">
-            <input type="text" name="username" placeholder="نام کاربری" required>
-            <input type="password" name="password" placeholder="رمز عبور" required>
-            <button type="submit">ورود</button>
-        </form>
-    </div>
+<div class="login-container">
+    <h1>ورود مدیر</h1>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-message">
+          {{ messages[0] }}
+        </div>
+      {% endif %}
+    {% endwith %}
+    <form method="POST">
+        <input type="text" name="username" placeholder="نام کاربری" required>
+        <input type="password" name="password" placeholder="رمز عبور" required>
+        <button type="submit">ورود</button>
+    </form>
+</div>
 </body>
 </html>
