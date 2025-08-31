@@ -12,10 +12,11 @@ body {
     font-family: 'Vazirmatn', Tahoma, sans-serif;
     background: #f5f7fa;
     padding-bottom: 80px;
+    overflow-x: hidden;
 }
 .navbar {
     background: #0d6efd !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
 }
 .navbar-brand {
     font-weight: 700;
@@ -23,18 +24,21 @@ body {
     color: #fff !important;
 }
 h2, h4 { font-weight: 700; color: #212529; }
+
+/* کارت کلاس‌ها سه‌بعدی */
 .class-card {
     border-radius: 20px;
     padding: 25px 15px;
     text-align: center;
     background: linear-gradient(135deg, #6a11cb, #2575fc);
     color: #fff;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-    transition: transform 0.4s, box-shadow 0.4s;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    perspective: 1000px;
 }
 .class-card:hover {
-    transform: translateY(-8px) scale(1.03);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+    transform: rotateX(5deg) rotateY(-5deg) scale(1.05);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.35);
 }
 .class-name {
     font-size: 1.5rem;
@@ -49,17 +53,20 @@ h2, h4 { font-weight: 700; color: #212529; }
     background: #fff;
     color: #2575fc;
     border: none;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
 }
 .btn-class-enter:hover {
     background: #e0e0e0;
-    transform: scale(1.1);
+    transform: scale(1.15) translateY(-3px);
 }
+
+/* کارت غایبین */
 .card-absent {
     border-radius: 25px;
     padding: 20px;
     background: #ffffff;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.2);
 }
 .absent-item {
     display: flex;
@@ -72,18 +79,21 @@ h2, h4 { font-weight: 700; color: #212529; }
     margin-bottom: 12px;
     background: linear-gradient(120deg, #ff6a00, #ffb347);
     color: #fff;
-    transition: transform 0.3s, box-shadow 0.3s;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .absent-item:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    transform: rotateX(3deg) scale(1.03);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.3);
 }
 .badge-absent {
     font-size: 1rem;
     padding: 0.5em 0.8em;
     background: #d32f2f !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
 }
 .alert { font-size: 0.95rem; }
+
+/* Footer انیمیشنی */
 .footer-note {
     font-family: 'Creepster', cursive;
     color: #d32f2f;
@@ -98,6 +108,8 @@ h2, h4 { font-weight: 700; color: #212529; }
     50% { transform: scale(1.05); color: #ff3d00; }
     100% { transform: scale(1); color: #d32f2f; }
 }
+
+/* موبایل */
 @media (max-width: 576px) {
     .class-name { font-size: 1.3rem; }
     .btn-class-enter { font-size: 1rem; padding: 0.6rem 1.2rem; }
@@ -186,6 +198,13 @@ setTimeout(() => {
         bsAlert.close();
     });
 }, 3000);
+
+// ✅ Register Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}")
+    .then(reg => console.log("Service Worker registered:", reg))
+    .catch(err => console.error("Service Worker registration failed:", err));
+}
 </script>
 </body>
 </html>
