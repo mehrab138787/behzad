@@ -72,7 +72,6 @@ def index():
 @login_required
 def view_class(class_id):
     class_ = Class.query.get_or_404(class_id)
-    # مرتب‌سازی بر اساس نام خانوادگی سپس نام کوچک
     students = Student.query.filter_by(class_id=class_id).order_by(Student.lastname, Student.firstname).all()
     return render_template("class_detail.html", class_=class_, students=students)
 
@@ -147,7 +146,6 @@ def edit_student(id):
 def absent(student_id):
     student = Student.query.get_or_404(student_id)
 
-    # دانش‌آموزانی که پیامک برایشان ارسال نشود
     no_sms_list = [
         {"firstname": "طاها", "lastname": "کامیابی", "class_name": "111"},
         {"firstname": "علیرضا", "lastname": "مرادی", "class_name": "310"}
@@ -159,7 +157,6 @@ def absent(student_id):
         flash(f"✅ غیبت برای {student.firstname} {student.lastname} ثبت شد (پیامک ارسال نشد).", "success")
         return redirect(url_for("view_class", class_id=student.class_id))
 
-    # زمان دقیق شمسی
     current_time = datetime.now()
     persian_datetime = jdatetime.datetime.fromgregorian(datetime=current_time)
     persian_date_str = persian_datetime.strftime("%Y/%m/%d")
@@ -179,12 +176,33 @@ def absent(student_id):
         'message': message_text
     }
     try:
-        response = api.sms_send(params)
+        api.sms_send(params)
         flash(f"✅ پیام غیبت برای {student.firstname} {student.lastname} ارسال شد.", "success")
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
 
     return redirect(url_for("view_class", class_id=student.class_id))
+
+
+# --- ارسال پیام والدین ---
+@app.route("/send_message", methods=["POST"])
+@login_required
+def send_message():
+    parent_number = request.form["parent_number"]
+    message = request.form["message"]
+
+    params = {
+        'sender': '2000660110',
+        'receptor': parent_number,
+        'message': message
+    }
+    try:
+        api.sms_send(params)
+        flash("✅ پیام شما با موفقیت برای والدین ارسال شد.", "success")
+    except Exception as e:
+        flash(f"❌ خطا در ارسال پیام: {e}", "danger")
+
+    return redirect(request.referrer)
 
 
 if __name__ == "__main__":
