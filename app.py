@@ -3,26 +3,15 @@ from flask_sqlalchemy import SQLAlchemy
 from kavenegar import *
 from datetime import datetime, date
 import jdatetime
-import pytz
+import pytz  # برای تنظیم ساعت ایران
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# --- DATABASE CONFIG ---
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///school.db'
+# --- DATABASE CONFIG (Postgres) ---
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://school_db_4bhe_user:UwPDfLJghWEyXtGYXrK5YBkYxQZXfkDS@dpg-d2tl60ur433s73dh90h0-a.oregon-postgres.render.com/school_db_4bhe'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
-# --- TIMEZONE (IRAN) ---
-tehran_tz = pytz.timezone("Asia/Tehran")
-
-def now_tehran():
-    """datetime timezone-aware for Tehran"""
-    return datetime.now(tehran_tz)
-
-def today_tehran():
-    """date today in Tehran"""
-    return now_tehran().date()
 
 # --- MODELS ---
 class Class(db.Model):
@@ -46,16 +35,10 @@ class Attendance(db.Model):
 
 # --- اضافه کردن فیلتر to_jalali ---
 def to_jalali(date_obj):
-    """تبدیل تاریخ میلادی به شمسی (ورودی می‌تواند date یا datetime باشد)"""
+    """تبدیل تاریخ میلادی به شمسی"""
     if not date_obj:
         return ""
-    if isinstance(date_obj, datetime):
-        # jdatetime با datetime آگاه به timezone هم کار می‌کند، اما برای اطمینان، tzinfo را حذف می‌کنیم
-        return jdatetime.datetime.fromgregorian(datetime=date_obj.replace(tzinfo=None)).strftime('%Y/%m/%d')
-    elif isinstance(date_obj, date):
-        return jdatetime.date.fromgregorian(date=date_obj).strftime('%Y/%m/%d')
-    # fallback
-    return str(date_obj)
+    return jdatetime.datetime.fromgregorian(datetime=date_obj).strftime('%Y/%m/%d')
 
 app.jinja_env.filters['to_jalali'] = to_jalali
 
@@ -74,6 +57,13 @@ def login_required(f):
 
 # --- KAVENEGAR CONFIG ---
 api = KavenegarAPI('526E472B46714B647A3230747266515A4F71314548357242782B33484A686F4B36396F66592B72427554513D')
+
+# --- تنظیم منطقه زمانی (ایران) ---
+tehran_tz = pytz.timezone("Asia/Tehran")
+
+def now_tehran():
+    """برگشت datetime در زمان تهران"""
+    return datetime.now(tehran_tz)
 
 # --- ROUTES ---
 @app.route("/login", methods=["GET", "POST"])
@@ -96,18 +86,12 @@ def logout():
     session.pop('logged_in', None)
     return redirect(url_for('login'))
 
-# --- صفحه اصلی با غایبین امروز ---
 @app.route("/")
 @login_required
 def index():
     classes = Class.query.order_by(Class.name).all()
-    today = today_tehran()
-    absents_today = (
-        Attendance.query
-        .join(Student).join(Class)
-        .filter(Attendance.date == today)
-        .all()
-    )
+    today = now_tehran().date()
+    absents_today = Attendance.query.join(Student).join(Class).filter(Attendance.date==today).all()
     return render_template("index.html", classes=classes, absents_today=absents_today)
 
 @app.route("/class/<int:class_id>")
@@ -177,47 +161,35 @@ def edit_student(id):
         return redirect(url_for("view_class", class_id=student.class_id))
     return render_template("edit_student.html", student=student)
 
-# --- ثبت غیبت با تاریخ امروز (به وقت ایران) ---
 @app.route("/absent/<int:student_id>")
 @login_required
 def absent(student_id):
     student = Student.query.get_or_404(student_id)
-
-    now_ir = now_tehran()
-    today = now_ir.date()
-    now_time = now_ir.time()
-
+    today = now_tehran().date()
+    now_time = now_tehran().time()
     attendance = Attendance(student_id=student.id, date=today, time=now_time)
     db.session.add(attendance)
     db.session.commit()
 
-    # تاریخ و ساعت شمسی برای پیامک
-    persian_datetime = jdatetime.datetime.fromgregorian(datetime=now_ir.replace(tzinfo=None))
+    persian_datetime = jdatetime.datetime.fromgregorian(datetime=now_tehran())
     persian_date_str = persian_datetime.strftime("%Y/%m/%d")
     persian_time_str = persian_datetime.strftime("%H:%M")
-
-    message_text = (
-        f"درود 🌹\n"
-        f"فرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) "
-        f"در تاریخ {persian_date_str} ساعت {persian_time_str} در مدرسه حضور نداشتند.\n"
-        f"با تشکر 🙏"
-    )
+    message_text = f"درود 🌹\nفرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) در تاریخ {persian_date_str} ساعت {persian_time_str} در مدرسه حضور نداشتند.\nبا تشکر 🙏"
     try:
-        api.sms_send({'sender': '2000660110', 'receptor': student.parent_number, 'message': message_text})
+        api.sms_send({'sender':'2000660110','receptor':student.parent_number,'message':message_text})
         flash(f"✅ پیام غیبت برای {student.firstname} ارسال شد.", "success")
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
 
     return redirect(url_for("view_class", class_id=student.class_id))
 
-# --- ارسال پیام والدین ---
 @app.route("/send_message", methods=["POST"])
 @login_required
 def send_message():
     parent_number = request.form["parent_number"]
     message = request.form["message"]
     try:
-        api.sms_send({'sender': '2000660110', 'receptor': parent_number, 'message': message})
+        api.sms_send({'sender':'2000660110','receptor':parent_number,'message':message})
         flash("✅ پیام شما با موفقیت برای والدین ارسال شد.", "success")
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
@@ -231,6 +203,7 @@ def student_absences():
     class_query = request.form.get("class_name", "").strip() if request.method == "POST" else ""
 
     student_attendance_list = []
+
     query = Student.query.join(Class)
 
     if search_query:
@@ -249,12 +222,10 @@ def student_absences():
         ).all()
         student_attendance_list.append({"student": student, "attendances": attendances})
 
-    return render_template(
-        "student_absences.html",
-        student_attendance_list=student_attendance_list,
-        search_query=search_query,
-        class_query=class_query
-    )
+    return render_template("student_absences.html",
+                           student_attendance_list=student_attendance_list,
+                           search_query=search_query,
+                           class_query=class_query)
 
 # --- ROUTE PING برای keep-alive ---
 @app.route("/ping")
