@@ -218,6 +218,10 @@ def student_absences():
                            student_attendance_list=student_attendance_list,
                            search_query=search_query,
                            class_query=class_query)
+# --- ROUTE PING برای keep-alive ---
+@app.route("/ping")
+def ping():
+    return "pong", 200
 
 if __name__ == "__main__":
     with app.app_context():
