@@ -3,13 +3,13 @@ from flask_sqlalchemy import SQLAlchemy
 from kavenegar import *
 from datetime import datetime, date
 import jdatetime
-import pytz  # برای تنظیم ساعت ایران
+import pytz  # برای تایم زون تهران
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# --- DATABASE CONFIG (Postgres) ---
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://school_db_4bhe_user:UwPDfLJghWEyXtGYXrK5YBkYxQZXfkDS@dpg-d2tl60ur433s73dh90h0-a.oregon-postgres.render.com/school_db_4bhe'
+# --- DATABASE CONFIG ---
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///school.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -42,6 +42,11 @@ def to_jalali(date_obj):
 
 app.jinja_env.filters['to_jalali'] = to_jalali
 
+# --- تابع ساعت تهران ---
+def now_tehran():
+    tz = pytz.timezone("Asia/Tehran")
+    return datetime.now(tz)
+
 # --- LOGIN CONFIG ---
 USERNAME = 'mehrab'
 PASSWORD = '13878700'
@@ -56,14 +61,7 @@ def login_required(f):
     return decorated_function
 
 # --- KAVENEGAR CONFIG ---
-api = KavenegarAPI('526E472B46714B647A3230747266515A4F71314548357242782B33484A686F4B36396F66592B72427554513D')
-
-# --- تنظیم منطقه زمانی (ایران) ---
-tehran_tz = pytz.timezone("Asia/Tehran")
-
-def now_tehran():
-    """برگشت datetime در زمان تهران"""
-    return datetime.now(tehran_tz)
+api = KavenegarAPI('YOUR_KAVENEGAR_API_KEY')
 
 # --- ROUTES ---
 @app.route("/login", methods=["GET", "POST"])
