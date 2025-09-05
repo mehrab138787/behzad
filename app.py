@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from kavenegar import *
-from datetime import datetime
+from datetime import datetime, date
 import jdatetime
 
 app = Flask(__name__)
@@ -24,6 +24,22 @@ class Student(db.Model):
     lastname = db.Column(db.String(50), nullable=False)
     parent_number = db.Column(db.String(20), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey("class.id"), nullable=False)
+    attendances = db.relationship("Attendance", backref="student", lazy=True, cascade="all, delete")
+
+class Attendance(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    time = db.Column(db.Time, nullable=False)
+
+# --- اضافه کردن فیلتر to_jalali ---
+def to_jalali(date_obj):
+    """تبدیل تاریخ میلادی به شمسی"""
+    if not date_obj:
+        return ""
+    return jdatetime.datetime.fromgregorian(datetime=date_obj).strftime('%Y/%m/%d')
+
+app.jinja_env.filters['to_jalali'] = to_jalali
 
 # --- LOGIN CONFIG ---
 USERNAME = 'mehrab'
@@ -39,7 +55,7 @@ def login_required(f):
     return decorated_function
 
 # --- KAVENEGAR CONFIG ---
-api = KavenegarAPI('38776243534D5573575A424D542F736A6D475957716B62575276573733427A43386B6F2F6B4A45555553773D')
+api = KavenegarAPI('526E472B46714B647A3230747266515A4F71314548357242782B33484A686F4B36396F66592B72427554513D')
 
 # --- ROUTES ---
 @app.route("/login", methods=["GET", "POST"])
@@ -66,7 +82,9 @@ def logout():
 @login_required
 def index():
     classes = Class.query.order_by(Class.name).all()
-    return render_template("index.html", classes=classes)
+    today = date.today()
+    absents_today = Attendance.query.join(Student).join(Class).filter(Attendance.date==today).all()
+    return render_template("index.html", classes=classes, absents_today=absents_today)
 
 @app.route("/class/<int:class_id>")
 @login_required
@@ -80,13 +98,10 @@ def view_class(class_id):
 def add_class():
     if request.method == "POST":
         classname = request.form["classname"]
-        if classname:
-            existing = Class.query.filter_by(name=classname).first()
-            if not existing:
-                new_class = Class(name=classname)
-                db.session.add(new_class)
-                db.session.commit()
-                flash(f"کلاس {classname} اضافه شد ✅", "success")
+        if classname and not Class.query.filter_by(name=classname).first():
+            db.session.add(Class(name=classname))
+            db.session.commit()
+            flash(f"کلاس {classname} اضافه شد ✅", "success")
         return redirect(url_for("index"))
     return render_template("add_class.html")
 
@@ -107,15 +122,12 @@ def add_student(class_id):
         firstname = request.form["firstname"]
         lastname = request.form["lastname"]
         parent_number = request.form["parent_number"]
-
         if firstname and lastname and parent_number:
-            student = Student(firstname=firstname, lastname=lastname,
-                              parent_number=parent_number, class_id=class_id)
+            student = Student(firstname=firstname, lastname=lastname, parent_number=parent_number, class_id=class_id)
             db.session.add(student)
             db.session.commit()
             flash(f"دانش‌آموز {firstname} {lastname} اضافه شد ✅", "success")
         return redirect(url_for("view_class", class_id=class_id))
-
     return render_template("add_student.html", class_=class_)
 
 @app.route("/delete_student/<int:id>")
@@ -145,65 +157,67 @@ def edit_student(id):
 @login_required
 def absent(student_id):
     student = Student.query.get_or_404(student_id)
+    today = date.today()
+    now_time = datetime.now().time()
+    attendance = Attendance(student_id=student.id, date=today, time=now_time)
+    db.session.add(attendance)
+    db.session.commit()
 
-    no_sms_list = [
-        {"firstname": "طاها", "lastname": "کامیابی", "class_name": "111"},
-        {"firstname": "علیرضا", "lastname": "مرادی", "class_name": "310"}
-    ]
-
-    if any(student.firstname == s["firstname"] and
-           student.lastname == s["lastname"] and
-           student.class_.name == s["class_name"] for s in no_sms_list):
-        flash(f"✅ غیبت برای {student.firstname} {student.lastname} ثبت شد (پیامک ارسال نشد).", "success")
-        return redirect(url_for("view_class", class_id=student.class_id))
-
-    current_time = datetime.now()
-    persian_datetime = jdatetime.datetime.fromgregorian(datetime=current_time)
+    persian_datetime = jdatetime.datetime.fromgregorian(datetime=datetime.now())
     persian_date_str = persian_datetime.strftime("%Y/%m/%d")
     persian_time_str = persian_datetime.strftime("%H:%M")
-
-    message_text = (
-        f"درود و وقت بخیر 🌹\n"
-        f"فرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) "
-        f"در تاریخ {persian_date_str} ساعت {persian_time_str} در مدرسه حضور نداشتند.\n"
-        f"لطفا فردا به مدرسه مراجعه نمایید.\n"
-        f"با تشکر 🙏"
-    )
-
-    params = {
-        'sender': '2000660110',
-        'receptor': student.parent_number,
-        'message': message_text
-    }
+    message_text = f"درود 🌹\nفرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) در تاریخ {persian_date_str} ساعت {persian_time_str} در مدرسه حضور نداشتند.\nبا تشکر 🙏"
     try:
-        api.sms_send(params)
-        flash(f"✅ پیام غیبت برای {student.firstname} {student.lastname} ارسال شد.", "success")
+        api.sms_send({'sender':'2000660110','receptor':student.parent_number,'message':message_text})
+        flash(f"✅ پیام غیبت برای {student.firstname} ارسال شد.", "success")
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
 
     return redirect(url_for("view_class", class_id=student.class_id))
 
-
-# --- ارسال پیام والدین ---
 @app.route("/send_message", methods=["POST"])
 @login_required
 def send_message():
     parent_number = request.form["parent_number"]
     message = request.form["message"]
-
-    params = {
-        'sender': '2000660110',
-        'receptor': parent_number,
-        'message': message
-    }
     try:
-        api.sms_send(params)
+        api.sms_send({'sender':'2000660110','receptor':parent_number,'message':message})
         flash("✅ پیام شما با موفقیت برای والدین ارسال شد.", "success")
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
-
     return redirect(request.referrer)
 
+# --- جستجوی غیبت دانش‌آموز ---
+@app.route("/student_absences", methods=["GET", "POST"])
+@login_required
+def student_absences():
+    search_query = request.form.get("search", "").strip() if request.method == "POST" else ""
+    class_query = request.form.get("class_name", "").strip() if request.method == "POST" else ""
+
+    student_attendance_list = []
+
+    query = Student.query.join(Class)
+
+    if search_query:
+        query = query.filter(
+            (Student.firstname.ilike(f"%{search_query}%")) |
+            (Student.lastname.ilike(f"%{search_query}%"))
+        )
+    if class_query:
+        query = query.filter(Class.name.ilike(f"%{class_query}%"))
+
+    students = query.order_by(Student.firstname, Student.lastname).all()
+
+    for student in students:
+        attendances = Attendance.query.filter_by(student_id=student.id).order_by(
+            Attendance.date.desc(), Attendance.time.desc()
+        ).all()
+        student_attendance_list.append({"student": student, "attendances": attendances})
+
+    return render_template("student_absences.html",
+                           student_attendance_list=student_attendance_list,
+                           search_query=search_query,
+                           class_query=class_query)
 
 if __name__ == "__main__":
     with app.app_context():

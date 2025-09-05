@@ -61,7 +61,7 @@ h2, h4 { font-weight: 700; color: #212529; }
     transform: scale(1.15) translateY(-3px);
 }
 
-/* کارت غایبین */
+/* کارت غایبین امروز حرفه‌ای */
 .card-absent {
     border-radius: 25px;
     padding: 20px;
@@ -80,6 +80,7 @@ h2, h4 { font-weight: 700; color: #212529; }
     background: linear-gradient(120deg, #ff6a00, #ffb347);
     color: #fff;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    perspective: 800px;
 }
 .absent-item:hover {
     transform: rotateX(3deg) scale(1.03);
@@ -126,6 +127,7 @@ h2, h4 { font-weight: 700; color: #212529; }
     <div class="d-flex ms-auto">
         <a href="/add_class" class="btn btn-light btn-sm me-2">➕ اضافه کردن کلاس</a>
         <a href="/" class="btn btn-warning btn-sm me-2">👤 دانش‌آموزان</a>
+        <a href="{{ url_for('student_absences') }}" class="btn btn-info btn-sm me-2">📋 غیبت دانش‌آموزان</a>
         <a href="/logout" class="btn btn-danger btn-sm">🚪 خروج</a>
     </div>
 </div>
@@ -166,20 +168,23 @@ h2, h4 { font-weight: 700; color: #212529; }
         {% endif %}
     </div>
 
-    <!-- غایبین امروز -->
+    <!-- غایبین امروز حرفه‌ای -->
     <h4 class="mb-4 fw-bold">📅 غایبین امروز</h4>
-    <div class="card-absent mb-5">
+    <div class="row g-3 mb-5">
         {% if absents_today %}
-        <ul class="list-group list-group-flush">
-            {% for absent in absents_today %}
-            <li class="absent-item">
-                {{ absent.firstname }} {{ absent.lastname }} - کلاس {{ absent.class }}
-                <span class="badge rounded-pill badge-absent">{{ absent.time }}</span>
-            </li>
+            {% for attendance in absents_today %}
+            <div class="col-12">
+                <div class="absent-item">
+                    <div>
+                        <strong>{{ attendance.student.firstname }} {{ attendance.student.lastname }}</strong><br>
+                        کلاس: {{ attendance.student.class_.name }}
+                    </div>
+                    <span>{{ attendance.time.strftime('%H:%M') }}</span>
+                </div>
+            </div>
             {% endfor %}
-        </ul>
         {% else %}
-        <p class="text-center text-muted">هنوز هیچ غایبی ثبت نشده است.</p>
+            <p class="text-center text-muted w-100">هنوز هیچ غایبی ثبت نشده است.</p>
         {% endif %}
     </div>
 
