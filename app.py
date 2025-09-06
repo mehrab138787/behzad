@@ -33,19 +33,21 @@ class Attendance(db.Model):
     date = db.Column(db.Date, nullable=False)
     time = db.Column(db.Time, nullable=False)
 
-# --- اضافه کردن فیلتر to_jalali ---
-def to_jalali(date_obj):
-    """تبدیل تاریخ میلادی به شمسی"""
-    if not date_obj:
-        return ""
-    return jdatetime.datetime.fromgregorian(datetime=date_obj).strftime('%Y/%m/%d')
-
-app.jinja_env.filters['to_jalali'] = to_jalali
-
 # --- تابع ساعت تهران ---
 def now_tehran():
     tz = pytz.timezone("Asia/Tehran")
     return datetime.now(tz)
+
+# --- فیلتر تبدیل تاریخ میلادی به شمسی ---
+def to_jalali(date_obj):
+    """تبدیل تاریخ میلادی به شمسی (به وقت تهران)"""
+    if not date_obj:
+        return ""
+    if hasattr(date_obj, "tzinfo"):  # اگر datetime تایم‌زون داشت
+        date_obj = date_obj.replace(tzinfo=None)
+    return jdatetime.datetime.fromgregorian(datetime=date_obj).strftime('%Y/%m/%d')
+
+app.jinja_env.filters['to_jalali'] = to_jalali
 
 # --- LOGIN CONFIG ---
 USERNAME = 'mehrab'
@@ -169,9 +171,12 @@ def absent(student_id):
     db.session.add(attendance)
     db.session.commit()
 
-    persian_datetime = jdatetime.datetime.fromgregorian(datetime=now_tehran())
+    # تبدیل زمان به جلالی (به وقت تهران)
+    dt = now_tehran().replace(tzinfo=None)
+    persian_datetime = jdatetime.datetime.fromgregorian(datetime=dt)
     persian_date_str = persian_datetime.strftime("%Y/%m/%d")
     persian_time_str = persian_datetime.strftime("%H:%M")
+
     message_text = f"درود 🌹\nفرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) در تاریخ {persian_date_str} ساعت {persian_time_str} در مدرسه حضور نداشتند.\nبا تشکر 🙏"
     try:
         api.sms_send({'sender':'2000660110','receptor':student.parent_number,'message':message_text})
