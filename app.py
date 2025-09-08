@@ -63,7 +63,7 @@ def login_required(f):
     return decorated_function
 
 # --- KAVENEGAR CONFIG ---
-api = KavenegarAPI('YOUR_KAVENEGAR_API_KEY')
+api = KavenegarAPI('526E472B46714B647A3230747266515A4F71314548357242782B33484A686F4B36396F66592B72427554513D')
 
 # --- ROUTES ---
 @app.route("/login", methods=["GET", "POST"])

@@ -179,8 +179,7 @@ h2, h4 { font-weight: 700; color: #212529; }
                         <strong>{{ attendance.student.firstname }} {{ attendance.student.lastname }}</strong><br>
                         کلاس: {{ attendance.student.class_.name }}
                     </div>
-                    <!-- استفاده از فیلتر زمان تهران -->
-                    <span>{{ attendance.time|to_tehran_time }}</span>
+                    <span>{{ attendance.time.strftime('%H:%M') }}</span>
                 </div>
             </div>
             {% endfor %}
