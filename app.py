@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from kavenegar import *
 from datetime import datetime, date
@@ -40,10 +40,9 @@ def now_tehran():
 
 # --- فیلتر تبدیل تاریخ میلادی به شمسی ---
 def to_jalali(date_obj):
-    """تبدیل تاریخ میلادی به شمسی (به وقت تهران)"""
     if not date_obj:
         return ""
-    if hasattr(date_obj, "tzinfo"):  # اگر datetime تایم‌زون داشت
+    if hasattr(date_obj, "tzinfo"):
         date_obj = date_obj.replace(tzinfo=None)
     return jdatetime.datetime.fromgregorian(datetime=date_obj).strftime('%Y/%m/%d')
 
@@ -63,7 +62,7 @@ def login_required(f):
     return decorated_function
 
 # --- KAVENEGAR CONFIG ---
-api = KavenegarAPI('526E472B46714B647A3230747266515A4F71314548357242782B33484A686F4B36396F66592B72427554513D')
+api = KavenegarAPI('44357543787965376E467856632B64397A4E59592F6E6170665172726B4C4B33513345432F35775A4B65303D')
 
 # --- ROUTES ---
 @app.route("/login", methods=["GET", "POST"])
@@ -161,7 +160,8 @@ def edit_student(id):
         return redirect(url_for("view_class", class_id=student.class_id))
     return render_template("edit_student.html", student=student)
 
-@app.route("/absent/<int:student_id>")
+# --- مسیر غیبت AJAX ---
+@app.route("/absent/<int:student_id>", methods=["POST"])
 @login_required
 def absent(student_id):
     student = Student.query.get_or_404(student_id)
@@ -171,7 +171,7 @@ def absent(student_id):
     db.session.add(attendance)
     db.session.commit()
 
-    # تبدیل زمان به جلالی (به وقت تهران)
+    # پیامک به والدین
     dt = now_tehran().replace(tzinfo=None)
     persian_datetime = jdatetime.datetime.fromgregorian(datetime=dt)
     persian_date_str = persian_datetime.strftime("%Y/%m/%d")
@@ -184,6 +184,8 @@ def absent(student_id):
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return '', 204  # بدون محتوا برای AJAX
     return redirect(url_for("view_class", class_id=student.class_id))
 
 @app.route("/send_message", methods=["POST"])
@@ -230,7 +232,24 @@ def student_absences():
                            search_query=search_query,
                            class_query=class_query)
 
-# --- ROUTE PING برای keep-alive ---
+# --- حذف غیبت ---
+@app.route("/delete_absence", methods=["POST"])
+@login_required
+def delete_absence():
+    data = request.get_json()
+    if not data or 'id' not in data:
+        return {"success": False, "error": "missing id"}, 400
+
+    absence_id = data['id']
+    absence = Attendance.query.get(absence_id)
+    if not absence:
+        return {"success": False, "error": "not found"}, 404
+
+    db.session.delete(absence)
+    db.session.commit()
+    return {"success": True}
+
+# --- ROUTE PING ---
 @app.route("/ping")
 def ping():
     return "pong", 200

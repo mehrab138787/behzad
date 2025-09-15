@@ -12,9 +12,14 @@ h2 { font-weight: 700; margin-bottom: 20px; text-align: center; }
 .card { border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); margin-bottom: 12px; transition: 0.3s; }
 .card:hover { transform: scale(1.02); box-shadow: 0 15px 30px rgba(0,0,0,0.15); }
 .accordion-button { font-weight: 600; }
-.absence-item { padding: 6px 0; border-bottom: 1px solid #eee; }
+.absence-item { padding: 6px 0; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
 .no-absence { color: #888; font-style: italic; padding: 6px 0; }
 .form-control, .btn { border-radius: 10px; }
+.del-btn { background: none; border: none; color: red; font-size: 18px; cursor: pointer; }
+.del-btn:hover { transform: scale(1.2); }
+
+/* Toast */
+#toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
 </style>
 </head>
 <body dir="rtl">
@@ -52,8 +57,9 @@ h2 { font-weight: 700; margin-bottom: 20px; text-align: center; }
                 <div class="accordion-body">
                     {% if attendances %}
                         {% for att in attendances %}
-                        <div class="absence-item">
-                            تاریخ: {{ att.date|to_jalali }} - ساعت: {{ att.time.strftime('%H:%M') }}
+                        <div class="absence-item" data-id="{{ att.id }}">
+                            <span>تاریخ: {{ att.date|to_jalali }} - ساعت: {{ att.time.strftime('%H:%M') }}</span>
+                            <button class="del-btn" data-id="{{ att.id }}" title="حذف غیبت">✖</button>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -73,6 +79,90 @@ h2 { font-weight: 700; margin-bottom: 20px; text-align: center; }
     </div>
 </div>
 
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Modal تأیید حذف -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="deleteModalLabel">تأیید حذف غیبت</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="بستن"></button>
+      </div>
+      <div class="modal-body">
+        آیا مطمئن هستید که می‌خواهید این غیبت را حذف کنید؟
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+        <button type="button" class="btn btn-danger" id="confirmDelete">بله، حذف شود</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let deleteId = null;
+let deleteBtnEl = null;
+
+function showToast(message, type="success") {
+  const container = document.getElementById('toast-container');
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `
+    <div class="toast align-items-center text-bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">${message}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  `;
+  const toastEl = wrapper.firstElementChild;
+  container.appendChild(toastEl);
+  const bsToast = new bootstrap.Toast(toastEl, { delay: 3000 });
+  bsToast.show();
+  toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  // باز کردن مودال هنگام کلیک روی ✖
+  document.querySelectorAll('.del-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      deleteId = this.dataset.id;
+      deleteBtnEl = this;
+      const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+      modal.show();
+    });
+  });
+
+  // تأیید حذف
+  document.getElementById('confirmDelete').addEventListener('click', function(){
+    if (!deleteId) return;
+
+    fetch('/delete_absence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: deleteId })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        deleteBtnEl.closest('.absence-item').remove();
+        showToast('✅ غیبت با موفقیت حذف شد', 'success');
+      } else {
+        showToast('❌ خطا در حذف: ' + (data.error || 'نامشخص'), 'danger');
+      }
+    })
+    .catch(() => {
+      showToast('❌ خطای ارتباط با سرور', 'danger');
+    });
+
+    // بستن مودال
+    const modalEl = document.getElementById('deleteModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    modal.hide();
+  });
+});
+</script>
 </body>
 </html>
