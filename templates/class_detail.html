@@ -88,7 +88,7 @@
       flex-wrap: wrap;
     }
     .action-row a, .action-row button {
-      flex: 1 1 48%;
+      flex: 1 1 30%;
       font-size: 0.95rem;
     }
 
@@ -165,7 +165,7 @@
 
   {% if students %}
     {% for student in students %}
-    <div class="student-card">
+    <div class="student-card" id="student-card-{{ student.id }}">
       <div class="student-row">
         <div class="student-index">{{ loop.index }}</div>
         <div class="student-name">{{ student.firstname }} {{ student.lastname }}</div>
@@ -178,6 +178,7 @@
       
       <div class="action-row">
         <a href="{{ url_for('edit_student', id=student.id) }}" class="btn btn-info">✏️ ویرایش</a>
+        <a href="#" class="btn btn-warning" onclick="openTransferModal({{ student.id }}, '{{ student.firstname }} {{ student.lastname }}')">🔄 جابجایی</a>
         <a href="{{ url_for('delete_student', id=student.id) }}" 
            class="btn btn-outline-secondary"
            onclick="return confirm('آیا مطمئنید می‌خواهید حذف کنید؟');">🗑 حذف</a>
@@ -207,6 +208,26 @@
         <button type="button" class="btn btn-danger px-4 mb-2" onclick="closeMessagePanel()">❌ بستن</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Modal جابجایی -->
+<div class="modal fade" id="transferModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">جابجایی دانش‌آموز</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="transferStudentName" class="fw-bold"></p>
+        <select id="newClassSelect" class="form-select mb-3"></select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+        <button type="button" class="btn btn-primary" onclick="submitTransfer()">انتقال</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -247,6 +268,46 @@
       } catch (err) {
           alert('خطا: ' + err);
       }
+  }
+
+  // جابجایی با modal و AJAX
+  let transferStudentId = null;
+
+  function openTransferModal(studentId, studentName) {
+      transferStudentId = studentId;
+      document.getElementById('transferStudentName').textContent = studentName;
+
+      fetch('/get_classes_for_transfer/' + studentId)
+          .then(res => res.json())
+          .then(data => {
+              let select = document.getElementById('newClassSelect');
+              select.innerHTML = '';
+              data.classes.forEach(cls => {
+                  let option = document.createElement('option');
+                  option.value = cls.id;
+                  option.textContent = cls.name;
+                  select.appendChild(option);
+              });
+              let modal = new bootstrap.Modal(document.getElementById('transferModal'));
+              modal.show();
+          });
+  }
+
+  function submitTransfer() {
+      let newClassId = document.getElementById('newClassSelect').value;
+      fetch('/transfer_student_ajax/' + transferStudentId, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ new_class_id: newClassId })
+      })
+      .then(res => res.json())
+      .then(data => {
+          if(data.success) {
+              location.reload(); // ساده‌ترین روش: کارت‌ها دوباره لود می‌شوند
+          } else {
+              alert('خطا در انتقال: ' + data.error);
+          }
+      });
   }
 </script>
 </body>

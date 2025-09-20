@@ -171,7 +171,6 @@ def absent(student_id):
     db.session.add(attendance)
     db.session.commit()
 
-    # پیامک به والدین
     dt = now_tehran().replace(tzinfo=None)
     persian_datetime = jdatetime.datetime.fromgregorian(datetime=dt)
     persian_date_str = persian_datetime.strftime("%Y/%m/%d")
@@ -179,13 +178,17 @@ def absent(student_id):
 
     message_text = f"درود 🌹\nفرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) در تاریخ {persian_date_str} ساعت {persian_time_str} در مدرسه حضور نداشتند.\nبا تشکر 🙏"
     try:
-        api.sms_send({'sender':'2000660110','receptor':student.parent_number,'message':message_text})
+        api.sms_send({
+            'sender': '2000300261',
+            'receptor': student.parent_number,
+            'message': message_text
+        })
         flash(f"✅ پیام غیبت برای {student.firstname} ارسال شد.", "success")
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return '', 204  # بدون محتوا برای AJAX
+        return '', 204
     return redirect(url_for("view_class", class_id=student.class_id))
 
 @app.route("/send_message", methods=["POST"])
@@ -194,7 +197,11 @@ def send_message():
     parent_number = request.form["parent_number"]
     message = request.form["message"]
     try:
-        api.sms_send({'sender':'2000660110','receptor':parent_number,'message':message})
+        api.sms_send({
+            'sender': '2000300261',
+            'receptor': parent_number,
+            'message': message
+        })
         flash("✅ پیام شما با موفقیت برای والدین ارسال شد.", "success")
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
@@ -248,6 +255,28 @@ def delete_absence():
     db.session.delete(absence)
     db.session.commit()
     return {"success": True}
+
+# --- جابجایی دانش‌آموز بین کلاس‌ها ---
+@app.route("/get_classes_for_transfer/<int:student_id>")
+@login_required
+def get_classes_for_transfer(student_id):
+    student = Student.query.get_or_404(student_id)
+    classes = Class.query.filter(Class.id != student.class_id).all()
+    return jsonify({
+        "classes": [{"id": c.id, "name": c.name} for c in classes]
+    })
+
+@app.route("/transfer_student_ajax/<int:student_id>", methods=["POST"])
+@login_required
+def transfer_student_ajax(student_id):
+    student = Student.query.get_or_404(student_id)
+    data = request.get_json()
+    new_class_id = data.get("new_class_id")
+    if not new_class_id:
+        return jsonify({"success": False, "error": "کلاس جدید انتخاب نشده"}), 400
+    student.class_id = int(new_class_id)
+    db.session.commit()
+    return jsonify({"success": True})
 
 # --- ROUTE PING ---
 @app.route("/ping")
