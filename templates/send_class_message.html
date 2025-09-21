@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>📢 پیام گروهی - کلاس {{ class_.name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa, #e4ecf7);
+      font-family: "Vazirmatn", Tahoma, sans-serif;
+      padding-bottom: 50px;
+    }
+    .message-card {
+      border-radius: 25px;
+      background: #fff;
+      padding: 30px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+      animation: fadeIn 0.6s ease;
+    }
+    .message-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .message-header h2 {
+      font-weight: 700;
+      color: #0d6efd;
+    }
+    .message-header p {
+      font-size: 1.1rem;
+      color: #555;
+    }
+    textarea {
+      border-radius: 15px;
+      resize: none;
+      font-size: 1.1rem;
+      padding: 15px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05) inset;
+    }
+    textarea:focus {
+      border: 2px solid #0d6efd;
+      box-shadow: 0 0 15px rgba(13,110,253,0.4);
+    }
+    .btn-send {
+      border-radius: 50px;
+      padding: 12px 25px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+      transition: transform 0.2s;
+    }
+    .btn-send:hover {
+      transform: translateY(-2px);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body dir="rtl">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-lg">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold fs-5" href="/">📚 دبیرستان استاد بهزاد</a>
+    <div class="d-flex ms-auto">
+      <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm rounded-pill">🚪 خروج</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-5">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="message-card">
+    <div class="message-header">
+      <h2>📢 پیام گروهی به کلاس {{ class_.name }}</h2>
+      <p>ارسال پیام رسمی برای تمامی والدین این کلاس</p>
+    </div>
+
+    <form method="POST">
+      <div class="mb-4">
+        <label for="message" class="form-label fw-bold">✍️ متن پیام</label>
+        <textarea id="message" name="message" class="form-control" rows="7" placeholder="پیام خود را اینجا بنویسید..." required></textarea>
+      </div>
+
+      <div class="d-flex gap-3 justify-content-center">
+        <button type="submit" class="btn btn-success btn-send">🚀 ارسال پیام</button>
+        <a href="{{ url_for('view_class', class_id=class_.id) }}" class="btn btn-secondary btn-send">⬅️ بازگشت</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -93,11 +93,21 @@ def index():
     absents_today = Attendance.query.join(Student).join(Class).filter(Attendance.date==today).all()
     return render_template("index.html", classes=classes, absents_today=absents_today)
 
+# --- VIEW CLASS با جستجوی اختصاصی ---
 @app.route("/class/<int:class_id>")
 @login_required
 def view_class(class_id):
     class_ = Class.query.get_or_404(class_id)
-    students = Student.query.filter_by(class_id=class_id).order_by(Student.lastname, Student.firstname).all()
+    search_query = request.args.get("search", "").strip()
+    
+    query = Student.query.filter_by(class_id=class_id)
+    if search_query:
+        query = query.filter(
+            (Student.firstname.ilike(f"%{search_query}%")) |
+            (Student.lastname.ilike(f"%{search_query}%"))
+        )
+    students = query.order_by(Student.lastname, Student.firstname).all()
+    
     return render_template("class_detail.html", class_=class_, students=students)
 
 @app.route("/add_class", methods=["GET", "POST"])
@@ -206,6 +216,37 @@ def send_message():
     except Exception as e:
         flash(f"❌ خطا در ارسال پیام: {e}", "danger")
     return redirect(request.referrer)
+
+# --- پیام گروهی برای یک کلاس ---
+@app.route("/send_class_message/<int:class_id>", methods=["GET", "POST"])
+@login_required
+def send_class_message(class_id):
+    class_ = Class.query.get_or_404(class_id)
+    if request.method == "POST":
+        message = request.form["message"]
+        if not message.strip():
+            flash("❌ متن پیام نمی‌تواند خالی باشد", "danger")
+            return redirect(url_for("send_class_message", class_id=class_id))
+
+        parent_numbers = [s.parent_number for s in class_.students if s.parent_number]
+
+        if not parent_numbers:
+            flash("❌ شماره‌ای برای والدین این کلاس ثبت نشده است", "danger")
+            return redirect(url_for("view_class", class_id=class_id))
+
+        try:
+            api.sms_send({
+                'sender': '2000300261',
+                'receptor': ",".join(parent_numbers),
+                'message': message
+            })
+            flash(f"✅ پیام برای همه والدین کلاس {class_.name} ارسال شد.", "success")
+        except Exception as e:
+            flash(f"❌ خطا در ارسال پیام: {e}", "danger")
+
+        return redirect(url_for("view_class", class_id=class_id))
+
+    return render_template("send_class_message.html", class_=class_)
 
 # --- جستجوی غیبت دانش‌آموز ---
 @app.route("/student_absences", methods=["GET", "POST"])
