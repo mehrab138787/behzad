@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from kavenegar import *
 from datetime import datetime, date
 import jdatetime
 import pytz  # برای تایم زون تهران
+import os
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -318,6 +319,17 @@ def transfer_student_ajax(student_id):
     student.class_id = int(new_class_id)
     db.session.commit()
     return jsonify({"success": True})
+
+# --- دانلود دیتابیس ---
+@app.route("/download_db")
+@login_required
+def download_db():
+    db_path = os.path.join(app.root_path, "school.db")
+    if os.path.exists(db_path):
+        return send_file(db_path, as_attachment=True)
+    else:
+        flash("❌ دیتابیس پیدا نشد.", "danger")
+        return redirect(url_for("index"))
 
 # --- ROUTE PING ---
 @app.route("/ping")
