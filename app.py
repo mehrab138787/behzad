@@ -100,15 +100,29 @@ def index():
 def view_class(class_id):
     class_ = Class.query.get_or_404(class_id)
     search_query = request.args.get("search", "").strip()
-    
+
     query = Student.query.filter_by(class_id=class_id)
     if search_query:
         query = query.filter(
             (Student.firstname.ilike(f"%{search_query}%")) |
             (Student.lastname.ilike(f"%{search_query}%"))
         )
-    students = query.order_by(Student.lastname, Student.firstname).all()
-    
+
+    # --- تابع مرتب‌سازی فارسی ---
+    def farsi_sort_key(text):
+        alphabet = "اآبپتثجچحخدذرزسشصضطظعغفقکگلمنوهی"
+        order = {ch: i for i, ch in enumerate(alphabet)}
+        return [order.get(ch, len(alphabet)) for ch in text]
+
+    # ابتدا همه دانش‌آموزها رو بگیر
+    students = query.all()
+
+    # مرتب‌سازی بر اساس نام خانوادگی سپس نام (بر اساس الفبای فارسی)
+    students = sorted(
+        students,
+        key=lambda s: (farsi_sort_key(s.lastname), farsi_sort_key(s.firstname))
+    )
+
     return render_template("class_detail.html", class_=class_, students=students)
 
 @app.route("/add_class", methods=["GET", "POST"])
