@@ -54,13 +54,13 @@ app.jinja_env.filters['to_jalali'] = to_jalali
 USERNAME = 'mehrab'
 PASSWORD = '13878700'
 
+# دکوریتور login_required فعلاً غیرفعال شد
 def login_required(f):
     from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get('logged_in'):
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
+        # return redirect(url_for('login'))  # غیرفعال
+        return f(*args, **kwargs)  # همیشه اجازه دسترسی
     return decorated_function
 
 # --- KAVENEGAR CONFIG ---
@@ -211,7 +211,8 @@ def escape(student_id):
     persian_datetime = jdatetime.datetime.fromgregorian(datetime=dt)
     persian_date_str = persian_datetime.strftime("%Y/%m/%d")
     persian_time_str = persian_datetime.strftime("%H:%M")
-    message_text = f"⚠️ فرزند شما ({student.firstname} {student.lastname} - کلاس {student.class_.name}) در تاریخ {persian_date_str} ساعت {persian_time_str} اقدام به خروج غیرمجاز از مدرسه کرده است!\nلطفاً توجه فرمایید."
+
+    message_text = f"فرزند شما {student.firstname} {student.lastname} در تاریخ {persian_date_str} ساعت {persian_time_str} بدون هماهنگی از دبیرستان استاد بهزاد خارج شده است. جهت پیگیری به دبیرستان مراجعه نمایید."
     
     try:
         api.sms_send({'sender': '2000300261','receptor': student.parent_number,'message': message_text})
