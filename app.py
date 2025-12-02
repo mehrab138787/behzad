@@ -324,10 +324,6 @@ def students_by_class():
         class_students.append({"class_name": c.name, "students": students})
     return render_template("students_by_class.html", class_students=class_students)
 
-@app.route("/ping")
-def ping():
-    return "pong", 200
-
 from sqlalchemy import text
 
 if __name__ == "__main__":
